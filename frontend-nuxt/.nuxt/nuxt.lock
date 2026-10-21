@@ -1,0 +1,10 @@
+{
+  "pid": 3536,
+  "startedAt": 1792483592272,
+  "interactive": true,
+  "command": "dev",
+  "cwd": "C:/xampp/htdocs/TaskFlow/FPCT-ARROW4D/frontend-nuxt",
+  "port": 3000,
+  "hostname": "::1",
+  "url": "http://[::1]:3000"
+}
