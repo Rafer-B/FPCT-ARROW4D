@@ -1,3 +1,6 @@
+import os
+os.environ["DISABLE_SQLALCHEMY_CEXT"] = "1"
+
 # Importamos a ferramenta que nos permite criar API.
 from fastapi import FastAPI
 from sqlalchemy import text

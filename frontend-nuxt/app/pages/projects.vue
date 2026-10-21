@@ -1,142 +1,277 @@
+
 <script setup lang="ts">
-// Define a estrutura de dados que esperamos receber da FastAPI.
-interface Projeto{
-    id: number
-    name: string
-    description: string | null
-    created_at: string
+interface Projeto {
+  id: number
+  name: string
+  description: string | null
+  created_at: string
 }
 
-// Endereço da API Python que já testamos no passo anterior.
+// Endereço da API FastAPI
 const apiBase = 'http://127.0.0.1:8000'
 
-// Guarda os valores introduzidos pelo utilizador no formulário.
 const formulario = reactive({
-    name: '',
-    description: ''
+  name: '',
+  description: ''
 })
 
-// Guarda a lista de projetos recebidos do backend
 const projetos = ref<Projeto[]>([])
 
-// Controla o estado do formulário e as mensagens apresentadas.
 const aCarregar = ref(false)
 const aCriar = ref(false)
 const erro = ref('')
 const sucesso = ref('')
 
-// Pede à FastAPI a lista atualizada de projetos.
-async function carregarProjetos(){
-    aCarregar.value = true
-    erro.value = ''
+// Carregar os projetos existentes
+async function carregarProjetos() {
+  aCarregar.value = true
+  erro.value = ''
 
-    try {
-        projetos.value = await $fetch<Projeto[]>(
-            `${apiBase}/api/taskflow/projects`
-        )
-    } catch (error) {
-        console.error('Erro ao carregar projetos: ', error)
-        erro.value = 'Não foi possivel carregar os projetos. Confirma se a FastAPI está ligada.'
-    } finally {
-        aCarregar.value = false
-    }
+  try {
+    projetos.value = await $fetch<Projeto[]>(
+      `${apiBase}/api/taskflow/projects`
+    )
+  } catch (error) {
+    console.error('Erro ao carregar projetos:', error)
+    erro.value =
+      'Não foi possível carregar os projetos. Confirma se a FastAPI está ligada.'
+  } finally {
+    aCarregar.value = false
+  }
 }
 
-// Envia os dados do formulário para criar um projeto na base de dados.
-async function criarProjeto(){
-    erro.value = ''
-    sucesso.value = ''
-    aCriar.value = true
+// Criar um novo projeto
+async function criarProjeto() {
+  erro.value = ''
+  sucesso.value = ''
 
-    try {
-        // O POST envia os campos em JSON para o endpoint da FastAPI.
-        const novoProjeto = await $fetch<Projeto>(
-            `${apiBase}/api/taskflow/projects`,
-            {
-                method: 'POST',
-                body:{
-                    name: formulario.name.trim(),
-                    description: formulario.description.trim() || null,
-                },
-            }
-        )
-        // Mostra uma confirmação com o nome do projeto criado.
-        sucesso.value = `Projeto "${novoProjeto.name}" Criado com Sucesso!`
+  if (!formulario.name.trim()) {
+    erro.value = 'O nome do projeto é obrigatório.'
+    return
+  }
 
-        // limpa os campos para permitir criar outro projeto.
-        formulario.name = ''
-        formulario.description = ''
+  aCriar.value = true
 
-        // Atualiza a lista para mostrar o projeto acabado de criar.
-        await carregarProjetos()
-    } catch(error: any){
-        console.error('Erro ao criar projeto: ', error)
+  try {
+    const novoProjeto = await $fetch<Projeto>(
+      `${apiBase}/api/taskflow/projects`,
+      {
+        method: 'POST',
+        body: {
+          name: formulario.name.trim(),
+          description: formulario.description.trim() || null
+        }
+      }
+    )
 
-        //A API pode devolver uma mensagem de validação ou outro detalhe.
-        erro.value = 
-            error?.data?.detail
-            ? `Não foi possivel criar o projeto: ${JSON.stringify(error.data.detail)}`
-            : 'Não foi possivel criar o projeto. Verifica a ligação à API.'
-    }finally{
-        aCriar.value = false
-    }
+    sucesso.value =
+      `Projeto "${novoProjeto.name}" criado com sucesso!`
+
+    formulario.name = ''
+    formulario.description = ''
+
+    await carregarProjetos()
+  } catch (error: any) {
+    console.error('Erro ao criar projeto:', error)
+
+    erro.value = error?.data?.detail
+      ? `Não foi possível criar o projeto: ${
+          typeof error.data.detail === 'string'
+            ? error.data.detail
+            : JSON.stringify(error.data.detail)
+        }`
+      : 'Não foi possível criar o projeto. Verifica a ligação à API.'
+  } finally {
+    aCriar.value = false
+  }
 }
 
-// Carregar os projetos quando a página é aberta no navegador.
+// Carregar os projetos quando a página é montada
 onMounted(() => {
-    carregarProjetos()
+  carregarProjetos()
 })
 </script>
 
 <template>
-    <main class="pagina">
-        <header class="cabecalho">
-            <h1>TaskFlow</h1>
-            <p>Organiza os teus projetos num só lugar.</p>
-        </header>
+  <main class="pagina">
+    <header class="cabecalho">
+      <h1>TaskFlow</h1>
+      <p>Organiza os teus projetos num só lugar.</p>
+    </header>
 
-        <section class="cartao">
-            <h2>Criar novo projeto</h2>
+    <section class="cartao">
+      <h2>Criar novo projeto</h2>
 
-            <form @submit.prevent="criarProjeto">
-                <div class="campo">
-                    <label for="nome"> Nome do projeto</label>
+      <form @submit.prevent="criarProjeto">
+        <div class="campo">
+          <label for="nome">Nome do projeto</label>
 
-                    <input
-                        id="nome"
-                        v-model="formulario.name"
-                        type="text"
-                        maxlength="120"
-                        placeholder="Ex.: O meu primeiro projeto"
-                        required
-                    />
-                </div>
+          <input
+            id="nome"
+            v-model="formulario.name"
+            type="text"
+            maxlength="120"
+            placeholder="Ex.: O meu primeiro projeto"
+            required
+          />
+        </div>
 
-                <div class="campo">
-                    <label for="descricao">Descrição</label>
+        <div class="campo">
+          <label for="descricao">Descrição</label>
 
-                    <textarea
-                        id="descricao"
-                        v-model="formulario.description"
-                        rows="4"
-                        placeholder="Descreve brevemente o projeto..."
-                    />
+          <textarea
+            id="descricao"
+            v-model="formulario.description"
+            rows="4"
+            placeholder="Descreve brevemente o projeto..."
+          ></textarea>
+        </div>
 
-                </div>
+        <button type="submit" :disabled="aCriar || aCarregar">
+          {{ aCriar ? 'A criar...' : 'Criar projeto' }}
+        </button>
+      </form>
 
-                <button type="submit" :disabled="aCarregar">
-                    {{ aCriar ? 'A criar...' : 'Criar Projeto' }}
-                </button>
-            </form>
+      <p
+        v-if="sucesso"
+        class="mensagem sucesso"
+        role="status"
+      >
+        {{ sucesso }}
+      </p>
 
-            <p v-if="sucesso" class="mensagem sucesso" role="status">
-                {{ sucesso }}
-            </p>
+      <p
+        v-if="erro"
+        class="mensagem erro"
+        role="alert"
+      >
+        {{ erro }}
+      </p>
+    </section>
 
-            <p v-if="erro" class="mensagem erro" role="alert">
-                {{ erro }}
-            </p>
+    <section class="cartao">
+      <h2>Os meus projetos</h2>
 
-        </section>
-    </main>
+      <p v-if="aCarregar">
+        A carregar projetos...
+      </p>
+
+      <p v-else-if="projetos.length === 0">
+        Ainda não existem projetos para mostrar.
+      </p>
+
+      <ul v-else class="lista-projetos">
+        <li
+          v-for="projeto in projetos"
+          :key="projeto.id"
+        >
+          <h3>{{ projeto.name }}</h3>
+
+          <p>
+            {{ projeto.description || 'Sem descrição.' }}
+          </p>
+
+          <small>Projeto #{{ projeto.id }}</small>
+        </li>
+      </ul>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.pagina {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 0 20px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
+}
+
+.cabecalho {
+  margin-bottom: 28px;
+}
+
+.cabecalho h1 {
+  margin-bottom: 8px;
+}
+
+.cabecalho p {
+  color: #666;
+}
+
+.cartao {
+  margin-bottom: 24px;
+  padding: 24px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: white;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+input,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font: inherit;
+}
+
+button {
+  padding: 12px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mensagem {
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+
+.sucesso {
+  color: #18733b;
+}
+
+.erro {
+  color: #b42318;
+}
+
+.lista-projetos {
+  padding: 0;
+  list-style: none;
+}
+
+.lista-projetos li {
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.lista-projetos h3 {
+  margin: 0 0 8px;
+}
+
+.lista-projetos p {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+.lista-projetos small {
+  color: #666;
+}
+</style>
